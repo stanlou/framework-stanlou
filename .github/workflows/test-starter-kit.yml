@@ -1,0 +1,47 @@
+name: Test Starter Kit Integration
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  test-starter-kit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout framework
+        uses: actions/checkout@v4
+        with:
+          path: framework
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.9.0
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9.8.0
+
+      - name: Clone starter-kit
+        run: git clone https://github.com/proto-kit/starter-kit.git starter-kit
+
+      - name: Add framework packages to pnpm workspace
+        working-directory: starter-kit
+        run: |
+          echo "" >> pnpm-workspace.yaml
+          echo "  - ../framework/packages/*" >> pnpm-workspace.yaml
+          cat pnpm-workspace.yaml
+
+      - name: Install dependencies
+        working-directory: starter-kit
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build starter-kit
+        working-directory: starter-kit
+        run: pnpm run build
