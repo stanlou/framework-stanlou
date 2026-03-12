@@ -38,6 +38,30 @@ jobs:
           echo "  - framework/packages/*" >> pnpm-workspace.yaml
           cat pnpm-workspace.yaml
 
+      - name: Rewrite @proto-kit/* paths to workspace protocol
+        working-directory: starter-kit
+        run: |
+          find . -name 'package.json' -not -path '*/node_modules/*' -not -path '*/framework/*' | while read pkg; do
+            node -e "
+              const fs = require('fs');
+              const p = JSON.parse(fs.readFileSync('$pkg', 'utf8'));
+              let changed = false;
+              for (const depType of ['dependencies', 'devDependencies', 'peerDependencies']) {
+                if (!p[depType]) continue;
+                for (const [name, version] of Object.entries(p[depType])) {
+                  if (name.startsWith('@proto-kit/') && (version.includes('framework/') || version.startsWith('file:') || version.startsWith('../'))) {
+                    p[depType][name] = 'workspace:*';
+                    changed = true;
+                  }
+                }
+              }
+              if (changed) {
+                fs.writeFileSync('$pkg', JSON.stringify(p, null, 2) + '\n');
+                console.log('Rewrote: $pkg');
+              }
+            "
+          done
+
       - name: Install dependencies
         working-directory: starter-kit
         run: pnpm install --no-frozen-lockfile
